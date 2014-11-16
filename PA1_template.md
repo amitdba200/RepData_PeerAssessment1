@@ -25,6 +25,7 @@ taken in 5 minute intervals each day.
 
 
 ```r
+## load the ggplot library
 library(ggplot2)
 ## Reading the data file
 data<-read.csv("activity.csv")
@@ -40,12 +41,20 @@ For this part of the assignment, you can ignore the missing values in the datase
 ```r
 result<-aggregate(data$steps, by=list(data$date), FUN=sum)
 colnames(result)<-c("date","total_steps")
+### histogram for all the steps 
+hist(result$total_steps,xlab="Number of Steps",main="Frequency of Number of steps",col="blue")
+```
+
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2-1.png) 
+
+```r
+## bar chart to show total steps each day
 out<- ggplot(result, aes(date, total_steps))+geom_bar(stat = "identity", colour = "blue")
 out<-out+xlab("Date")+ylab("Number of steps") + theme(axis.text.x = element_text(angle = 90))
 out+ggtitle("Total number of steps taken each day")
 ```
 
-![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2-1.png) 
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2-2.png) 
 
 - *2. Calculate and report the mean and median total number of steps taken per day*
 
@@ -69,9 +78,14 @@ cat("The median total number of steps taken per day : ",assign1_median)
 
 **What is the average daily activity pattern?**
 
-- * 1. Make a time series plot (i.e. type = "l" ) of the 5minute interval (xaxis) and the average number of steps taken, averaged across all days (yaxis)*
+- *1. Make a time series plot (i.e. type = "l" ) of the 5minute interval (xaxis) and the average number of steps taken, averaged across all days (yaxis)*
 
 ```r
+## Reading the data file
+data<-read.csv("activity.csv")
+## Ignore missing values
+data<-subset(data,!is.na(data$steps))
+## find average number of steps taken at each interval
 result<-aggregate(data$steps, by=list(data$interval), FUN=mean)
 colnames(result)<-c("interval","mean_steps")
 out<- ggplot(result, aes(interval, mean_steps)) + geom_line(color = "blue") 
@@ -82,14 +96,6 @@ out+ggtitle("Average number of steps taken each day")
 ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png) 
 - *Which 5minute interval, on average across all the days in the dataset, contains the max number of steps?*
 
-
-```r
-cat("Max number of steps :","")
-```
-
-```
-## Max number of steps :
-```
 
 ```r
 subset(result,result$mean_steps == max(result$mean_steps))
@@ -116,37 +122,52 @@ cat("Total number of missing values in data set :",nrow(subset(data,is.na(data$s
 
 -*2. Devise a strategy for filling in all of the missing values in the dataset.*
 
-I use the mean for a day's interval to fill each NA value in the steps column.
+I use the mean for an interval of all the days to fill NA values.for example interval "5" has 3 values as 40,20,30 on three different days, mean will be 30.
 
 -*3. Create a new dataset that is equal to the original dataset but with the missing data filled in.*
 
 ```r
-data<-subset(data,!is.na(data$steps))
-result<-aggregate(data$steps, by=list(data$date), FUN=sum)
-colnames(result)<-c("date","total_steps")
-
+## read the data file 
 data<-read.csv("activity.csv")
+## remove NA values
+data<-subset(data,!is.na(data$steps))
+## calculate mean of each interval for all days
+result<-aggregate(data$steps, by=list(data$interval), FUN=mean)
+## update column name of result data set
+colnames(result)<-c("interval","mean_steps")
+## read data set again to have NA values in data
+data<-read.csv("activity.csv")
+## loop and iterate through each record in data set
 for (index_count in 1: nrow(data)) 
   {
 	if (is.na(data$steps[index_count])) 
 		{
-		data$steps[index_count] <-subset(result,data$date[index_count]  ==  result$date)
+    ## assign mean of steps at interval where NA is in steps
+    data$steps[index_count] <-subset(result,data$interval[index_count]  ==  result$interval)$mean_steps
 		}
 	}
 ```
 
 - *4.Make a histogram of the total number of steps taken each day*
 
+
 ```r
-##result<-aggregate(data$steps, by=list(data$date), FUN=sum)
+result<-aggregate(data$steps, by=list(data$date), FUN=sum)
 colnames(result)<-c("date","total_steps")
+### histogram for all the steps 
+hist(result$total_steps,xlab="Number of Steps",main="Frequency of Number of steps- NA values imputed",col="blue")
+```
+
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-1.png) 
+
+```r
 ## datewise chart for total
 out<-ggplot(result, aes(date, total_steps))+geom_bar(stat = "identity", colour = "blue")
 out<-out+xlab("Date")+ylab("Number of steps") + theme(axis.text.x = element_text(angle = 90))
 out+ggtitle("Total number of steps taken each day")
 ```
 
-![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-1.png) 
+![plot of chunk unnamed-chunk-8](figure/unnamed-chunk-8-2.png) 
 
 
 -*4. Calculate and report the mean and median total number of steps taken per day*
@@ -164,7 +185,7 @@ cat("New - The median total number of steps taken per day : ",median(result$tota
 ```
 
 ```
-## New - The median total number of steps taken per day :  10765
+## New - The median total number of steps taken per day :  10766.19
 ```
 
 ```r
@@ -184,7 +205,8 @@ cat("Old - The median total number of steps taken per day : ",assign1_median)
 ```
 -*4. Do these values differ from the estimates from the first part of the assignment?*
 
-No these values dont differ.
+The mean value does not differ however median value has been changed due to imputing.
+the new median of total steps taken per day is greater than that of the old median.
 
 **Are there differences in activity patterns between weekdays and weekends?**
 - *1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.*
@@ -192,17 +214,30 @@ No these values dont differ.
 ```r
 data<-read.csv("activity.csv")
 data<-subset(data,!is.na(data$steps))
-data$weekdays <-weekdays(as.Date(as.character(data$date)))
-levels(data$weekdays) <- list(weekday = c("Monday", "Tuesday","Wednesday","Thursday", "Friday"),weekend = c("Saturday", "Sunday"))
-result <-aggregate(data$steps,list(interval = as.numeric(as.character(data$interval)),weekdays = data$weekdays),FUN = mean)
+for (index_count in 1: nrow(data)) 
+  {
+  ## check if the day is a weekend or weekday
+  if (weekdays(as.Date(as.character(data$date[index_count]))) %in% c("Saturday", "Sunday")) 
+    {
+    ## update the value as weekend
+    data$weekdays[index_count] <-c("weekend")
+    }
+  else
+		{
+    ## update the value as weekday
+    data$weekdays[index_count] <-c("weekday")
+		}
+	}
 ```
 
 - *2. Make a panel plot containing a time series plot (i.e. type = "l" ) of the 5minute interval (xaxis) and the average number of steps taken, averaged across all weekday days or weekend days (yaxis)*
 
 ```r
+## 
+result <-aggregate(data$steps,list(interval = as.numeric(as.character(data$interval)),weekdays = data$weekdays),FUN = mean)
 colnames(result)<-c("interval","weekdays","mean_steps")
 library(lattice)
-xyplot(result$mean_steps ~ result$interval|result$weekdays,layout = c(1, 2), type = "l")
+xyplot(result$mean_steps ~ result$interval|result$weekdays,layout = c(1, 2), type = "l",xlab="Interval",ylab="average number of steps")
 ```
 
-![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) ![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-2.png) ![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-3.png) ![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-4.png) 
+![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
